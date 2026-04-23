@@ -4,7 +4,7 @@ from moviepy.config import change_settings
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-# GİTHUB SİSTEM AYARI
+# GİTHUB SİSTEM AYARI (LİNUX)
 IMAGEMAGICK_EXE = "/usr/bin/convert"
 change_settings({"IMAGEMAGICK_BINARY": IMAGEMAGICK_EXE})
 
@@ -13,7 +13,8 @@ def siradaki_sozu_al():
     if not os.path.exists(prog_file):
         with open(prog_file, "w") as f: f.write("0")
     with open(prog_file, "r") as f:
-        index = int(f.read().strip() or 0)
+        content = f.read().strip()
+        index = int(content) if content else 0
     with open("motivasyon_sozleri_1000.txt", "r", encoding="utf-8") as f:
         lines = f.readlines()
     if index >= len(lines): index = 0
@@ -34,4 +35,4 @@ if __name__ == "__main__":
     body = {'snippet': {'title': f"{soz[:50]}... #shorts", 'categoryId': '22'}, 'status': {'privacyStatus': 'public'}}
     media = MediaFileUpload("final.mp4", chunksize=-1, resumable=True)
     yt.videos().insert(part='snippet,status', body=body, media_body=media).execute()
-    print("🚀 Video Atıldı!")
+    print("🚀 Video Başarıyla Atıldı!")
