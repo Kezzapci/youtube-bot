@@ -26,13 +26,39 @@ if __name__ == "__main__":
     soz = siradaki_sozu_al()
     clip = VideoFileClip("video.mp4")
     music = AudioFileClip("muzik.mp3").subclip(0, clip.duration).volumex(0.3)
+    
+    # Yazı ayarları
     txt = TextClip(soz, fontsize=70, color='white', font='Arial-Bold', method='caption', size=(clip.w*0.8, None), align='center').set_duration(clip.duration).set_position('center')
+    
     final = CompositeVideoClip([clip, txt]).set_audio(music)
     final.write_videofile("final.mp4", codec="libx264", audio_codec="aac", fps=24, logger=None)
 
+    # YouTube'a yükleme ve Açıklama kısmı
     with open('token.json', 'rb') as t: creds = pickle.load(t)
     yt = build('youtube', 'v3', credentials=creds)
-    body = {'snippet': {'title': f"{soz[:50]}... #shorts", 'categoryId': '22'}, 'status': {'privacyStatus': 'public'}}
+
+    # BİRLEŞTİRİLMİŞ AÇIKLAMA METNİ
+    aciklama = f"""Zihnini güçlendir, hayatını değiştir! 💪 
+
+Günün Mesajı: {soz}
+
+Bu video hedeflerine ulaşman için küçük bir hatırlatma. Eğer pes etmeye niyetin yoksa ailemize katıl! 🚀
+
+Daha fazlası için takipte kal. 🎯
+
+#motivasyon #başarı #kişiselgelişim #gününsözü #shorts #disiplin #girişimcilik #hedef #aslapesetme"""
+
+    body = {
+        'snippet': {
+            'title': f"{soz[:50]}... #shorts",
+            'description': aciklama,
+            'categoryId': '22'
+        },
+        'status': {
+            'privacyStatus': 'public'
+        }
+    }
+    
     media = MediaFileUpload("final.mp4", chunksize=-1, resumable=True)
     yt.videos().insert(part='snippet,status', body=body, media_body=media).execute()
-    print("🚀 Video Başarıyla Atıldı!")
+    print("🚀 Video ve Yeni Açıklama Başarıyla Atıldı!")
