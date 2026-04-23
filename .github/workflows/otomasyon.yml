@@ -1,7 +1,7 @@
 name: Video Botu
 on:
   schedule:
-    - cron: '0 0 * * *' 
+    - cron: '0 9 * * *' # Türkiye saatiyle her gün tam 12:00'de çalışır
   workflow_dispatch:
 jobs:
   run-bot:
