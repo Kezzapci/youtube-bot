@@ -1,7 +1,7 @@
 name: Video Botu
 on:
   schedule:
-    - cron: '0 9 * * *' # Türkiye saatiyle her gün tam 12:00'de çalışır
+    - cron: '0 9 * * *' 
   workflow_dispatch:
 jobs:
   run-bot:
@@ -12,7 +12,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install imagemagick -y
-          # BURASI KRİTİK: Güvenlik engelini kaldırıyoruz
           sudo sed -i 's/domain="path" rights="none" pattern="@\*"/domain="path" rights="read|write" pattern="@\*"/g' /etc/ImageMagick-6/policy.xml
           pip install --upgrade pip
           pip install moviepy==1.0.3 google-api-python-client google-auth-oauthlib
