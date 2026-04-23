@@ -4,7 +4,7 @@ from moviepy.config import change_settings
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-# GİTHUB SİSTEM AYARI (LİNUX)
+# GİTHUB SİSTEM AYARI
 IMAGEMAGICK_EXE = "/usr/bin/convert"
 change_settings({"IMAGEMAGICK_BINARY": IMAGEMAGICK_EXE})
 
