@@ -1,9 +1,8 @@
 name: Video Botu
 on:
   schedule:
-    - cron: '0 0 * * *' # Her 24 saatte bir (Gece 00:00 UTC) çalışır
-  workflow_dispatch: # İstediğin zaman manuel çalıştırmanı sağlar
-
+    - cron: '0 0 * * *' # Her 24 saatte bir çalışır
+  workflow_dispatch:
 jobs:
   run-bot:
     runs-on: ubuntu-latest
@@ -13,7 +12,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install imagemagick -y
-          pip install moviepy google-api-python-client google-auth-oauthlib
+          pip install --upgrade pip
+          pip install moviepy==1.0.3 google-api-python-client google-auth-oauthlib
       - name: Botu Tetikle
         run: python ana_bot.py
       - name: Sirayi Guncelle
@@ -21,5 +21,5 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add siradaki_soz.txt
-          git commit -m "24 saatlik periyot tamamlandi" || echo "Degisiklik yok"
+          git commit -m "Sira guncellendi" || echo "Degisiklik yok"
           git push
