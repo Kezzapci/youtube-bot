@@ -4,7 +4,7 @@ from moviepy.config import change_settings
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-# GİTHUB SİSTEM AYARI
+# GİTHUB SİSTEM AYARI (Linux dizin yapısı)
 IMAGEMAGICK_EXE = "/usr/bin/convert"
 change_settings({"IMAGEMAGICK_BINARY": IMAGEMAGICK_EXE})
 
@@ -27,7 +27,7 @@ def siradaki_sozu_al():
 if __name__ == "__main__":
     soz = siradaki_sozu_al()
     
-    # Depondaki videoyu al (Dosya adının video.mp4 olduğundan emin ol)
+    # Depondaki video
     video_path = "video.mp4" 
     
     if not os.path.exists(video_path):
@@ -46,16 +46,34 @@ if __name__ == "__main__":
     final = CompositeVideoClip([clip, txt])
     final.write_videofile("final.mp4", codec="libx264", audio_codec="aac", fps=24, logger=None)
 
-    # YOUTUBE YÜKLEME
-    with open('token.json', 'rb') as t: creds = pickle.load(t)
+    # YOUTUBE YÜKLEME - KEŞFET ODAKLI DÜZENLEME
+    with open('token.json', 'rb') as t: 
+        creds = pickle.load(t)
     yt = build('youtube', 'v3', credentials=creds)
 
-    aciklama = f"Zihnini güçlendir! 💪\n\n#motivasyon #başarı #shorts"
+    # KEŞFET AYARLARI
+    # Başlığın başına emoji ve "GÜNÜN MOTİVASYONU" ekleyerek dikkat çekiyoruz
+    baslik = f"GÜNÜN MOTİVASYONU: {soz[:40]}... 🔥 #shorts"
+    
+    # Açıklamaya etkileşim sorusu ve geniş hashtag havuzu ekledik
+    aciklama = (
+        f"{soz}\n\n"
+        "Zihnini her gün bir adım ileriye taşı! 💪✨\n\n"
+        "Sence başarının sırrı nedir? Yorumlarda buluşalım! 👇\n\n"
+        "Her gün yeni bir doz motivasyon için abone olmayı unutma! 🚀\n\n"
+        "#motivasyon #başarı #disiplin #gelişim #psikoloji #keşfet #shorts #zihin"
+    )
+
     body = {
-        'snippet': {'title': f"{soz[:50]}... #shorts", 'description': aciklama, 'categoryId': '22'},
+        'snippet': {
+            'title': baslik, 
+            'description': aciklama, 
+            'categoryId': '27', # '22' yerine '27' (Eğitim) kategorisi bu tarz içerikleri daha iyi keşfete sokar
+            'defaultLanguage': 'tr'
+        },
         'status': {'privacyStatus': 'public'}
     }
     
     media = MediaFileUpload("final.mp4", chunksize=-1, resumable=True)
     yt.videos().insert(part='snippet,status', body=body, media_body=media).execute()
-    print("✅ Eski sistemle video paylaşıldı!")
+    print(f"🚀 Keşfet odaklı video paylaşıldı: {baslik}")
