@@ -1,23 +1,28 @@
 name: Video Botu
 on:
   schedule:
-    - cron: '0 9 * * *' 
-  workflow_dispatch:
+    - cron: '0 9,13 * * *' # Türkiye saatiyle 12:00 ve 16:00 (UTC 09:00 ve 13:00)
+  workflow_dispatch: # Canın sıkıldığında elle basman için buton duruyor
+
 jobs:
   run-bot:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Sistem Kurulumu ve Guvenlik Kilidini Ac
+      - name: Kodlari Cek
+        uses: actions/checkout@v3
+
+      - name: Sistem Kurulumu
         run: |
           sudo apt-get update
           sudo apt-get install imagemagick -y
+          # ImageMagick güvenlik kilidini açıyoruz
           sudo sed -i 's/domain="path" rights="none" pattern="@\*"/domain="path" rights="read|write" pattern="@\*"/g' /etc/ImageMagick-6/policy.xml
-          pip install --upgrade pip
           pip install moviepy==1.0.3 google-api-python-client google-auth-oauthlib
+
       - name: Botu Tetikle
         run: python ana_bot.py
-      - name: Sirayi Guncelle
+
+      - name: Sirayi Guncelle ve Kaydet
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
