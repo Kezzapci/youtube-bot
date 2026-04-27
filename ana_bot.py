@@ -33,46 +33,44 @@ if __name__ == "__main__":
         print("❌ HATA: video.mp4 dosyası bulunamadı!")
         exit()
 
-    # .subclip(0, 10) KISMINI KALDIRDIK: Video kaç saniyeyse tamamını alır (22 sn ise 22 sn)
     clip = VideoFileClip(video_path)
     
     if os.path.exists("muzik.mp3"):
         music = AudioFileClip("muzik.mp3").subclip(0, clip.duration).volumex(0.3)
         clip = clip.set_audio(music)
     
-    # Yazıyı videonun tam süresine göre ayarlıyoruz
     txt = TextClip(soz, fontsize=50, color='white', font='Arial-Bold', method='caption', 
                    size=(clip.w*0.8, None), align='center').set_duration(clip.duration).set_position('center')
     
     final = CompositeVideoClip([clip, txt])
     final.write_videofile("final.mp4", codec="libx264", audio_codec="aac", fps=24, logger=None)
 
-    # YOUTUBE YÜKLEME - KEŞFET ODAKLI DÜZENLEME
+    # YOUTUBE YÜKLEME - İSPANYOLCA KEŞFET ODAKLI DÜZENLEME
     with open('token.json', 'rb') as t: 
         creds = pickle.load(t)
     yt = build('youtube', 'v3', credentials=creds)
 
-    # KEŞFET AYARLARI
-    baslik = f"GÜNÜN MOTİVASYONU: {soz[:40]}... 🔥 #shorts"
+    # İSPANYOLCA KEŞFET AYARLARI
+    baslik = f"MOTIVACIÓN DIARIA: {soz[:40]}... 🔥 #shorts"
     
     aciklama = (
         f"{soz}\n\n"
-        "Zihnini her gün bir adım ileriye taşı! 💪✨\n\n"
-        "Sence başarının sırrı nedir? Yorumlarda buluşalım! 👇\n\n"
-        "Her gün yeni bir doz motivasyon için abone olmayı unutma! 🚀\n\n"
-        "#motivasyon #başarı #disiplin #gelişim #psikoloji #keşfet #shorts #zihin"
+        "¡Lleva tu mente un paso más allá cada día! 💪✨\n\n"
+        "¿Cuál es tu secreto para el éxito? ¡Cuéntanos en los comentarios! 👇\n\n"
+        "¡Suscríbete para recibir tu dosis diaria de motivación! 🚀\n\n"
+        "#motivacion #exito #disciplina #desarrollopersonal #psicologia #mentalidad #shorts #reels"
     )
 
     body = {
         'snippet': {
             'title': baslik, 
             'description': aciklama, 
-            'categoryId': '27', # Eğitim kategorisi keşfet puanını artırır
-            'defaultLanguage': 'tr'
+            'categoryId': '27', # Eğitim kategorisi keşfeti destekler
+            'defaultLanguage': 'es' # İspanyolca olarak ayarlandı
         },
         'status': {'privacyStatus': 'public'}
     }
     
     media = MediaFileUpload("final.mp4", chunksize=-1, resumable=True)
     yt.videos().insert(part='snippet,status', body=body, media_body=media).execute()
-    print(f"🚀 22 Saniyelik Keşfet Videosu Paylaşıldı: {baslik}")
+    print(f"🚀 Video de Motivación en Español Publicado: {baslik}")
