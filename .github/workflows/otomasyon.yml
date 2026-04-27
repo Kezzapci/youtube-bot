@@ -1,7 +1,7 @@
 name: Video Botu
 on:
   schedule:
-    - cron: '0 9,13 * * *' # Türkiye saatiyle 12:00 ve 16:00 (UTC 09:00 ve 13:00)
+    - cron: '0 17,19 * * *' # Türkiye saatiyle 20:00 ve 22:00 (UTC 17:00 ve 19:00)
   workflow_dispatch: # Canın sıkıldığında elle basman için buton duruyor
 
 jobs:
