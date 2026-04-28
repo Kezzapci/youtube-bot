@@ -1,11 +1,12 @@
 import json
 import pickle
+import random
+import re
 from pathlib import Path
 from typing import List, Dict, Any
 
 from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import VideoFileClip, AudioFileClip, ImageClip, CompositeVideoClip
-from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
@@ -15,7 +16,7 @@ SOZLER_FILE = BASE_DIR / "data" / "sozler.txt"
 BASLIKLAR_FILE = BASE_DIR / "data" / "youtube_basliklari.txt"
 ACIKLAMALAR_FILE = BASE_DIR / "data" / "youtube_aciklamalari.txt"
 
-BACKGROUND_VIDEO = BASE_DIR / "videos" / "Wolf_Motivation_Video_y9oxsx15.mp4"
+VIDEOS_DIR = BASE_DIR / "videos"
 MUSIC_FILE = BASE_DIR / "assets" / "music.mp3"
 
 OUTPUT_DIR = BASE_DIR / "output"
@@ -32,18 +33,24 @@ FONT_SIZE = 72
 VIDEO_FPS = 30
 MUSIC_VOLUME = 0.35
 
-SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
-
 
 def read_lines(path: Path) -> List[str]:
     if not path.exists():
         raise FileNotFoundError(f"Dosya bulunamadı: {path}")
 
-    return [
-        line.strip()
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
+    cleaned = []
+
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+
+        # Baştaki 1) 2. 3- gibi numaraları sil
+        line = re.sub(r"^\s*\d+\s*[\)\.\-:]*\s*", "", line)
+
+        cleaned.append(line)
+
+    return cleaned
 
 
 def load_state() -> Dict[str, Any]:
@@ -79,7 +86,7 @@ def get_next_data() -> Dict[str, Any]:
         "next_index": index + 1,
         "soz": sozler[index],
         "title": basliklar[index] if index < len(basliklar) else sozler[index][:90],
-        "description": aciklamalar[index] if index < len(aciklamalar) else "",
+        "description": random.choice(aciklamalar) if aciklamalar else "",
     }
 
 
@@ -124,7 +131,6 @@ def wrap_text(text: str, font, max_width: int) -> str:
 
 def create_text_overlay(text: str, width: int, height: int) -> Path:
     OUTPUT_DIR.mkdir(exist_ok=True)
-
     overlay_path = OUTPUT_DIR / "text_overlay.png"
 
     img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
@@ -133,49 +139,31 @@ def create_text_overlay(text: str, width: int, height: int) -> Path:
     font = find_font(FONT_SIZE)
     wrapped = wrap_text(text.upper(), font, int(width * 0.82))
 
-    bbox = draw.multiline_textbbox(
-        (0, 0),
-        wrapped,
-        font=font,
-        spacing=18,
-        align="center",
-    )
-
+    bbox = draw.multiline_textbbox((0, 0), wrapped, font=font, spacing=18, align="center")
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
 
     x = (width - text_w) / 2
     y = (height - text_h) / 2
 
-    draw.multiline_text(
-        (x + 5, y + 5),
-        wrapped,
-        font=font,
-        fill=(0, 0, 0, 200),
-        spacing=18,
-        align="center",
-    )
-
-    draw.multiline_text(
-        (x, y),
-        wrapped,
-        font=font,
-        fill=(255, 255, 255, 255),
-        spacing=18,
-        align="center",
-    )
+    draw.multiline_text((x + 5, y + 5), wrapped, font=font, fill=(0, 0, 0, 200), spacing=18, align="center")
+    draw.multiline_text((x, y), wrapped, font=font, fill=(255, 255, 255, 255), spacing=18, align="center")
 
     img.save(overlay_path)
     return overlay_path
 
 
 def render_video(text: str) -> Path:
-    if not BACKGROUND_VIDEO.exists():
-        raise FileNotFoundError(f"Video bulunamadı: {BACKGROUND_VIDEO}")
+    video_files = list(VIDEOS_DIR.glob("*.mp4"))
+    if not video_files:
+        raise FileNotFoundError("videos klasöründe mp4 yok.")
+
+    background_video = random.choice(video_files)
+    print("Seçilen video:", background_video.name)
 
     OUTPUT_DIR.mkdir(exist_ok=True)
 
-    clip = VideoFileClip(str(BACKGROUND_VIDEO))
+    clip = VideoFileClip(str(background_video))
 
     if MUSIC_FILE.exists():
         music = AudioFileClip(str(MUSIC_FILE))
@@ -184,12 +172,7 @@ def render_video(text: str) -> Path:
         clip = clip.set_audio(music)
 
     overlay = create_text_overlay(text, clip.w, clip.h)
-
-    text_clip = (
-        ImageClip(str(overlay))
-        .set_duration(clip.duration)
-        .set_position("center")
-    )
+    text_clip = ImageClip(str(overlay)).set_duration(clip.duration).set_position("center")
 
     final = CompositeVideoClip([clip, text_clip])
 
@@ -210,13 +193,10 @@ def render_video(text: str) -> Path:
 
 def get_youtube_service():
     if not TOKEN_FILE.exists():
-        raise FileNotFoundError("token.json bulunamadı.")
+        raise FileNotFoundError("token.pickle bulunamadı.")
 
-    try:
-        credentials = Credentials.from_authorized_user_file(str(TOKEN_FILE), SCOPES)
-    except:
-        with open(TOKEN_FILE, "rb") as f:
-            credentials = pickle.load(f)
+    with open(TOKEN_FILE, "rb") as f:
+        credentials = pickle.load(f)
 
     if not credentials.valid:
         raise RuntimeError("token geçersiz.")
