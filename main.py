@@ -21,7 +21,7 @@ MUSIC_FILE = BASE_DIR / "assets" / "music.mp3"
 OUTPUT_DIR = BASE_DIR / "output"
 OUTPUT_VIDEO = OUTPUT_DIR / "final_video.mp4"
 
-TOKEN_FILE = BASE_DIR / "token.json"
+TOKEN_FILE = BASE_DIR / "token.pickle"
 STATE_FILE = BASE_DIR / "state.json"
 
 YOUTUBE_CATEGORY_ID = "22"
