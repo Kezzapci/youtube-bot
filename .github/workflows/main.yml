@@ -3,7 +3,7 @@ name: YouTube Bot
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 8 * * *"
+    - cron: "0 */6 * * *"
 
 jobs:
   upload:
@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Repo indir
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Python kur
         uses: actions/setup-python@v5
@@ -38,4 +40,5 @@ jobs:
           git config user.email "github-actions@github.com"
           git add -f state.json
           git commit -m "Update video state" || echo "Değişiklik yok"
+          git pull --rebase origin main
           git push
