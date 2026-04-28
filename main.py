@@ -1,4 +1,5 @@
 import json
+import pickle
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -7,7 +8,6 @@ from moviepy.editor import VideoFileClip, AudioFileClip, ImageClip, CompositeVid
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -52,7 +52,7 @@ def load_state() -> Dict[str, Any]:
 
     try:
         return json.loads(STATE_FILE.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+    except:
         return {"index": 0}
 
 
@@ -212,10 +212,14 @@ def get_youtube_service():
     if not TOKEN_FILE.exists():
         raise FileNotFoundError("token.json bulunamadı.")
 
-    credentials = Credentials.from_authorized_user_file(str(TOKEN_FILE), SCOPES)
+    try:
+        credentials = Credentials.from_authorized_user_file(str(TOKEN_FILE), SCOPES)
+    except:
+        with open(TOKEN_FILE, "rb") as f:
+            credentials = pickle.load(f)
 
     if not credentials.valid:
-        raise RuntimeError("token.json geçersiz. Yeniden token alman lazım.")
+        raise RuntimeError("token geçersiz.")
 
     return build("youtube", "v3", credentials=credentials)
 
@@ -251,7 +255,6 @@ def upload_video(video_path: Path, title: str, description: str) -> str:
 def main():
     data = get_next_data()
 
-    print(f"{data['index'] + 1}. söz hazırlanıyor...")
     print("Söz:", data["soz"])
     print("Başlık:", data["title"])
 
