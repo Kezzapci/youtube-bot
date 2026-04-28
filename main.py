@@ -15,7 +15,7 @@ SOZLER_FILE = BASE_DIR / "data" / "sozler.txt"
 BASLIKLAR_FILE = BASE_DIR / "data" / "youtube_basliklari.txt"
 ACIKLAMALAR_FILE = BASE_DIR / "data" / "youtube_aciklamalari.txt"
 
-BACKGROUND_VIDEO = BASE_DIR / "assets" / "Wolf_Motivation_Video_y9oxsx15.mp4"
+BACKGROUND_VIDEO = BASE_DIR / "videos" / "Wolf_Motivation_Video_y9oxsx15.mp4"
 MUSIC_FILE = BASE_DIR / "assets" / "music.mp3"
 
 OUTPUT_DIR = BASE_DIR / "output"
