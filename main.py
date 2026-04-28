@@ -198,8 +198,8 @@ def render_video(text: str) -> Path:
         codec="libx264",
         audio_codec="aac",
         fps=VIDEO_FPS,
-        preset="medium",
-        threads=2,
+        preset="ultrafast",
+        threads=4,
     )
 
     clip.close()
