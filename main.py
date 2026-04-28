@@ -39,15 +39,12 @@ def read_lines(path: Path) -> List[str]:
         raise FileNotFoundError(f"Dosya bulunamadı: {path}")
 
     cleaned = []
-
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line:
             continue
 
-        # Baştaki 1) 2. 3- gibi numaraları sil
         line = re.sub(r"^\s*\d+\s*[\)\.\-:]*\s*", "", line)
-
         cleaned.append(line)
 
     return cleaned
@@ -55,17 +52,27 @@ def read_lines(path: Path) -> List[str]:
 
 def load_state() -> Dict[str, Any]:
     if not STATE_FILE.exists():
-        return {"index": 0}
+        return {"index": 0, "last_video": ""}
 
     try:
-        return json.loads(STATE_FILE.read_text(encoding="utf-8"))
+        data = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+        if "last_video" not in data:
+            data["last_video"] = ""
+        return data
     except:
-        return {"index": 0}
+        return {"index": 0, "last_video": ""}
 
 
-def save_state(index: int) -> None:
+def save_state(index: int, last_video: str) -> None:
     STATE_FILE.write_text(
-        json.dumps({"index": index}, ensure_ascii=False, indent=2),
+        json.dumps(
+            {
+                "index": index,
+                "last_video": last_video
+            },
+            ensure_ascii=False,
+            indent=2
+        ),
         encoding="utf-8",
     )
 
@@ -84,6 +91,7 @@ def get_next_data() -> Dict[str, Any]:
     return {
         "index": index,
         "next_index": index + 1,
+        "last_video": state.get("last_video", ""),
         "soz": sozler[index],
         "title": basliklar[index] if index < len(basliklar) else sozler[index][:90],
         "description": random.choice(aciklamalar) if aciklamalar else "",
@@ -153,16 +161,20 @@ def create_text_overlay(text: str, width: int, height: int) -> Path:
     return overlay_path
 
 
-def render_video(text: str) -> Path:
+def render_video(text: str, last_video: str):
     video_files = list(VIDEOS_DIR.glob("*.mp4"))
     if not video_files:
         raise FileNotFoundError("videos klasöründe mp4 yok.")
 
-    background_video = random.choice(video_files)
+    available = [v for v in video_files if v.name != last_video]
+    if not available:
+        available = video_files
+
+    background_video = random.choice(available)
+
     print("Seçilen video:", background_video.name)
 
     OUTPUT_DIR.mkdir(exist_ok=True)
-
     clip = VideoFileClip(str(background_video))
 
     if MUSIC_FILE.exists():
@@ -188,18 +200,12 @@ def render_video(text: str) -> Path:
     clip.close()
     final.close()
 
-    return OUTPUT_VIDEO
+    return OUTPUT_VIDEO, background_video.name
 
 
 def get_youtube_service():
-    if not TOKEN_FILE.exists():
-        raise FileNotFoundError("token.pickle bulunamadı.")
-
     with open(TOKEN_FILE, "rb") as f:
         credentials = pickle.load(f)
-
-    if not credentials.valid:
-        raise RuntimeError("token geçersiz.")
 
     return build("youtube", "v3", credentials=credentials)
 
@@ -238,12 +244,12 @@ def main():
     print("Söz:", data["soz"])
     print("Başlık:", data["title"])
 
-    video_path = render_video(data["soz"])
+    video_path, used_video = render_video(data["soz"], data["last_video"])
 
     print("YouTube'a yükleniyor...")
     video_id = upload_video(video_path, data["title"], data["description"])
 
-    save_state(data["next_index"])
+    save_state(data["next_index"], used_video)
 
     print("Bitti.")
     print("Video ID:", video_id)
