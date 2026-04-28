@@ -1,7 +1,4 @@
 import json
-import math
-import os
-import textwrap
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -11,23 +8,29 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-from config import (
-    SOZLER_FILE,
-    BASLIKLAR_FILE,
-    ACIKLAMALAR_FILE,
-    BACKGROUND_VIDEO,
-    MUSIC_FILE,
-    STATE_FILE,
-    OUTPUT_VIDEO,
-    TOKEN_FILE,
-    OUTPUT_DIR,
-    YOUTUBE_CATEGORY_ID,
-    YOUTUBE_PRIVACY,
-    YOUTUBE_LANGUAGE,
-    FONT_SIZE,
-    VIDEO_FPS,
-    MUSIC_VOLUME,
-)
+
+BASE_DIR = Path(__file__).resolve().parent
+
+SOZLER_FILE = BASE_DIR / "data" / "sozler.txt"
+BASLIKLAR_FILE = BASE_DIR / "data" / "youtube_basliklari.txt"
+ACIKLAMALAR_FILE = BASE_DIR / "data" / "youtube_aciklamalari.txt"
+
+BACKGROUND_VIDEO = BASE_DIR / "assets" / "Wolf_Motivation_Video_y9oxsx15.mp4"
+MUSIC_FILE = BASE_DIR / "assets" / "music.mp3"
+
+OUTPUT_DIR = BASE_DIR / "output"
+OUTPUT_VIDEO = OUTPUT_DIR / "final_video.mp4"
+
+TOKEN_FILE = BASE_DIR / "token.json"
+STATE_FILE = BASE_DIR / "state.json"
+
+YOUTUBE_CATEGORY_ID = "22"
+YOUTUBE_PRIVACY = "public"
+YOUTUBE_LANGUAGE = "ru"
+
+FONT_SIZE = 72
+VIDEO_FPS = 30
+MUSIC_VOLUME = 0.35
 
 SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 
@@ -65,9 +68,6 @@ def get_next_data() -> Dict[str, Any]:
     basliklar = read_lines(BASLIKLAR_FILE)
     aciklamalar = read_lines(ACIKLAMALAR_FILE)
 
-    if not sozler:
-        raise ValueError("Sözler dosyası boş.")
-
     state = load_state()
     index = int(state.get("index", 0))
 
@@ -83,28 +83,26 @@ def get_next_data() -> Dict[str, Any]:
     }
 
 
-def find_font(size: int) -> ImageFont.FreeTypeFont:
-    candidates = [
+def find_font(size: int):
+    fonts = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        "C:/Windows/Fonts/arialbd.ttf",
-        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
     ]
 
-    for font_path in candidates:
-        if Path(font_path).exists():
-            return ImageFont.truetype(font_path, size=size)
+    for f in fonts:
+        if Path(f).exists():
+            return ImageFont.truetype(f, size=size)
 
     return ImageFont.load_default()
 
 
-def wrap_text(text: str, font: ImageFont.FreeTypeFont, max_width: int) -> str:
+def wrap_text(text: str, font, max_width: int) -> str:
     words = text.split()
     lines = []
     current = ""
 
-    dummy = Image.new("RGBA", (10, 10))
-    draw = ImageDraw.Draw(dummy)
+    img = Image.new("RGBA", (10, 10))
+    draw = ImageDraw.Draw(img)
 
     for word in words:
         test = f"{current} {word}".strip()
@@ -125,8 +123,9 @@ def wrap_text(text: str, font: ImageFont.FreeTypeFont, max_width: int) -> str:
 
 
 def create_text_overlay(text: str, width: int, height: int) -> Path:
-    overlay_path = OUTPUT_DIR / "text_overlay.png"
     OUTPUT_DIR.mkdir(exist_ok=True)
+
+    overlay_path = OUTPUT_DIR / "text_overlay.png"
 
     img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
@@ -134,28 +133,35 @@ def create_text_overlay(text: str, width: int, height: int) -> Path:
     font = find_font(FONT_SIZE)
     wrapped = wrap_text(text.upper(), font, int(width * 0.82))
 
-    bbox = draw.multiline_textbbox((0, 0), wrapped, font=font, spacing=16, align="center")
+    bbox = draw.multiline_textbbox(
+        (0, 0),
+        wrapped,
+        font=font,
+        spacing=18,
+        align="center",
+    )
+
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
 
     x = (width - text_w) / 2
     y = (height - text_h) / 2
 
-    shadow_offset = 4
     draw.multiline_text(
-        (x + shadow_offset, y + shadow_offset),
+        (x + 5, y + 5),
         wrapped,
         font=font,
-        fill=(0, 0, 0, 180),
-        spacing=16,
+        fill=(0, 0, 0, 200),
+        spacing=18,
         align="center",
     )
+
     draw.multiline_text(
         (x, y),
         wrapped,
         font=font,
         fill=(255, 255, 255, 255),
-        spacing=16,
+        spacing=18,
         align="center",
     )
 
@@ -165,24 +171,28 @@ def create_text_overlay(text: str, width: int, height: int) -> Path:
 
 def render_video(text: str) -> Path:
     if not BACKGROUND_VIDEO.exists():
-        raise FileNotFoundError(
-            f"Arka plan video bulunamadı: {BACKGROUND_VIDEO}. "
-            "Videonu assets/background.mp4 olarak koy."
-        )
+        raise FileNotFoundError(f"Video bulunamadı: {BACKGROUND_VIDEO}")
 
     OUTPUT_DIR.mkdir(exist_ok=True)
 
     clip = VideoFileClip(str(BACKGROUND_VIDEO))
 
     if MUSIC_FILE.exists():
-        audio = AudioFileClip(str(MUSIC_FILE)).subclip(0, min(clip.duration, AudioFileClip(str(MUSIC_FILE)).duration))
-        audio = audio.volumex(MUSIC_VOLUME)
-        clip = clip.set_audio(audio)
+        music = AudioFileClip(str(MUSIC_FILE))
+        music = music.subclip(0, min(clip.duration, music.duration))
+        music = music.volumex(MUSIC_VOLUME)
+        clip = clip.set_audio(music)
 
-    overlay_path = create_text_overlay(text, clip.w, clip.h)
-    text_clip = ImageClip(str(overlay_path)).set_duration(clip.duration).set_position("center")
+    overlay = create_text_overlay(text, clip.w, clip.h)
+
+    text_clip = (
+        ImageClip(str(overlay))
+        .set_duration(clip.duration)
+        .set_position("center")
+    )
 
     final = CompositeVideoClip([clip, text_clip])
+
     final.write_videofile(
         str(OUTPUT_VIDEO),
         codec="libx264",
@@ -200,16 +210,12 @@ def render_video(text: str) -> Path:
 
 def get_youtube_service():
     if not TOKEN_FILE.exists():
-        raise FileNotFoundError(
-            "token.json bulunamadı. Önce yerelde `python auth.py` çalıştır."
-        )
+        raise FileNotFoundError("token.json bulunamadı.")
 
     credentials = Credentials.from_authorized_user_file(str(TOKEN_FILE), SCOPES)
 
     if not credentials.valid:
-        raise RuntimeError(
-            "token.json geçersiz veya süresi dolmuş. Yerelde yeniden `python auth.py` çalıştır."
-        )
+        raise RuntimeError("token.json geçersiz. Yeniden token alman lazım.")
 
     return build("youtube", "v3", credentials=credentials)
 
@@ -242,19 +248,22 @@ def upload_video(video_path: Path, title: str, description: str) -> str:
     return response.get("id", "")
 
 
-def main() -> None:
+def main():
     data = get_next_data()
 
-    print(f"🎬 {data['index'] + 1}. video hazırlanıyor...")
+    print(f"{data['index'] + 1}. söz hazırlanıyor...")
+    print("Söz:", data["soz"])
+    print("Başlık:", data["title"])
+
     video_path = render_video(data["soz"])
 
-    print("📤 YouTube'a yükleniyor...")
+    print("YouTube'a yükleniyor...")
     video_id = upload_video(video_path, data["title"], data["description"])
 
     save_state(data["next_index"])
 
-    print("✅ İşlem tamam.")
-    print(f"Video ID: {video_id}")
+    print("Bitti.")
+    print("Video ID:", video_id)
 
 
 if __name__ == "__main__":
