@@ -7,6 +7,6 @@ token.json
 output/
 *.mp4
 *.mp3
-state.json
 __pycache__/
 *.pyc
+!state.json
