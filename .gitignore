@@ -1,12 +1,17 @@
 # Secrets
 client_secret.json
 token.json
+token.pickle
 .env
 
-# Outputs / generated
+# Outputs
 output/
 *.mp4
 *.mp3
+
+# Python
 __pycache__/
 *.pyc
+
+# state dosyasını sakla
 !state.json
